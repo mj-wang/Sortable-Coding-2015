@@ -16,6 +16,8 @@ class ListingsMatcher():
     def __init__(self, listings_df=pd.DataFrame(), products_df=pd.DataFrame()):
         self.listings_df = listings_df
         self.products_df = products_df
+        self.match_score_threshold = 1
+        self.no_match_marker = "|--NO MATCH--|"
 
     def read_data(self, listings_fname = "listings.txt", products_fname="products.txt"):
         #read listings and products into dataframes
@@ -102,9 +104,11 @@ class ListingsMatcher():
             naive_scores = self.products_df['prod_texts'].apply(lambda prod_texts: len(set.intersection(set(prod_texts),
                                                                             set(txts))))
             #naive_scores = naive_scores/np.sum(naive_scores)
-            weighted_scores = [prod_sims[i]*math.exp(naive_scores[i]) for i in xrange(len(prod_sims))]
+            weighted_scores = [prod_sims[i]*naive_scores[i] for i in xrange(len(prod_sims))]
             weighted_scores = sorted(enumerate(weighted_scores), key=lambda item: -item[1])
-            return self.products_df.ix[weighted_scores[0][0]]['product_name']
+            match = self.products_df.ix[weighted_scores[0][0]]['product_name']\
+                    if weighted_scores > self.match_score_threshold else self.no_match_marker
+            return match
 
         self.listings_df['prod_match_weighted'] = self.listings_df.apply(lambda row: find_lsi_with_naive_score(
                                                                         row['listings_texts'],
@@ -118,13 +122,14 @@ class ListingsMatcher():
 
         results_file = open(out_fname, "w")
         for prod_name, listing_grp in listings_grouped:
-            jsonData = {"product_name": prod_name,
-                        "listings": [{'title': row[1]['title'],
-                                      'manufacturer': row[1]['manufacturer'],
-                                      'currency': row[1]['currency'],
-                                      'price': row[1]['price']} for row in listing_grp.iterrows()]}
-            json.dump(jsonData, results_file, ensure_ascii=True)
-            results_file.write("\n")
+            if prod_name!=self.no_match_marker:
+                jsonData = {"product_name": prod_name,
+                            "listings": [{'title': row[1]['title'],
+                                          'manufacturer': row[1]['manufacturer'],
+                                          'currency': row[1]['currency'],
+                                          'price': row[1]['price']} for row in listing_grp.iterrows()]}
+                json.dump(jsonData, results_file, ensure_ascii=True)
+                results_file.write("\n")
         results_file.close()
 
 if __name__ == "__main__":
