@@ -82,9 +82,6 @@ class ListingsMatcher():
         self.listings_df['listings_vec_tfidf'] = self.listings_df['listings_vec'].apply(lambda vec: tfidf[vec])
         self.listings_df['listings_vec_lsi'] = self.listings_df['listings_vec_tfidf'].apply(lambda vec: lsi[vec])
 
-        self.listings_df = self.listings_df.drop('listings_vec', 1)
-        self.listings_df = self.listings_df.drop('listings_vec_tfidf', 1)
-
         #create index of similarities
         prod_index = gensim.similarities.MatrixSimilarity(prod_corpus_lsi,num_features=prod_topic_num)
 
